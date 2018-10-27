@@ -1,4 +1,4 @@
-use rnix::parser::{NodeId, ASTNode, AST, Arena};
+use rnix::parser::{ASTNode, Arena, NodeId, AST};
 
 pub trait CollectFromAST {
     type Item;
@@ -8,7 +8,7 @@ pub trait CollectFromAST {
 type MatchFn = Fn(&Arena, &NodeId, &ASTNode) -> bool;
 
 struct CollectMatchingNodes {
-    match_fn: &'static MatchFn
+    match_fn: &'static MatchFn,
 }
 
 impl CollectFromAST for CollectMatchingNodes {
@@ -27,7 +27,7 @@ pub fn collect_in_tree<T>(
     collect: &impl CollectFromAST<Item = T>,
     arena: &Arena,
     node_id: &NodeId,
-    node: &ASTNode
+    node: &ASTNode,
 ) -> Vec<T> {
     let mut result = vec![];
     let current_node_match = collect.visit_node(&arena, node_id, node);
