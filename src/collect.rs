@@ -23,7 +23,7 @@ impl CollectFromAST for CollectMatchingNodes {
     }
 }
 
-fn walk_node<T>(
+pub fn collect_in_tree<T>(
     collect: &impl CollectFromAST<Item = T>,
     arena: &Arena,
     node_id: &NodeId,
@@ -38,7 +38,7 @@ fn walk_node<T>(
 
     for child_id in node.children(arena) {
         let child = &arena[child_id];
-        let mut changes_for_child = walk_node(collect, arena, &child_id, child);
+        let mut changes_for_child = collect_in_tree(collect, arena, &child_id, child);
 
         result.append(&mut changes_for_child);
     }
@@ -52,5 +52,5 @@ pub fn find_all(match_fn: &'static MatchFn, ast: &AST<'static>) -> Vec<(NodeId, 
     let arena = &ast.arena;
     let root_node = &arena[root_id];
 
-    return walk_node(&collect, &arena, &root_id, &root_node);
+    return collect_in_tree(&collect, &arena, &root_id, &root_node);
 }
