@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use std::fs::File;
 use std::io::Read;
-use rnix::parser::{NodeId, ASTNode};
+use rnix::parser::{NodeId, ASTNode, Arena};
 
 #[derive(Debug)]
 struct Replacement {
@@ -72,7 +72,7 @@ fn apply_changes(ast: &rnix::parser::AST<'static>, changes: &[Change]) -> rnix::
     }
 }
 
-fn stdenv_identifier(_: &NodeId, node: &ASTNode) -> bool {
+fn stdenv_identifier(_: &Arena, _: &NodeId, node: &ASTNode) -> bool {
     match &node.data {
         rnix::parser::Data::Ident(_, name) => name == "stdenv",
         _ => false
