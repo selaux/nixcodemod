@@ -3,18 +3,15 @@
 extern crate rnix;
 
 mod collect;
+mod node_builder;
 
 use std::path::PathBuf;
 
 use std::fs::File;
 use std::io::Read;
-use rnix::parser::{NodeId, ASTNode, Arena};
 
-#[derive(Debug)]
-struct Replacement {
-    kind: rnix::parser::ASTKind,
-    data: rnix::parser::Data
-}
+pub use rnix::parser::{NodeId, ASTNode, Arena};
+pub use node_builder::*;
 
 impl Replacement {
     fn apply_on_ast(&self, ast: &rnix::parser::AST<'static>, original_node_id: &rnix::parser::NodeId) -> rnix::parser::AST<'static> {
@@ -22,8 +19,16 @@ impl Replacement {
         let node_ids = new_arena.get_ids();
         let original_node = &ast.arena[*original_node_id];
         let replacement_node = rnix::parser::ASTNode {
-            kind: self.kind,
-            data: self.data.clone(),
+            kind: rnix::parser::ASTKind::Ident,
+            data: rnix::parser::Data::Ident(
+                match &original_node.data {
+                  rnix::parser::Data::Ident(meta, _) => meta.clone(),
+                  _ => unreachable!()
+                },
+                match &self.node {
+                    IsolatedNode::Identifier(id) => id.name.clone()
+                }
+            ),
             span: original_node.span.clone(),
             // TODO: What about the children?
             node: rnix::parser::Node {
@@ -56,15 +61,20 @@ impl Replacement {
 }
 
 #[derive(Debug)]
-enum Change {
+struct Replacement {
+    node: IsolatedNode
+}
+
+#[derive(Debug)]
+enum Operation {
     Replace(rnix::parser::NodeId, Replacement)
 }
 
-fn apply_changes(ast: &rnix::parser::AST<'static>, changes: &[Change]) -> rnix::parser::AST<'static> {
-    match changes {
-        [ change, rest.. ] => {
-            let new_ast = match change {
-                Change::Replace(node_id, replacement) => replacement.apply_on_ast(ast, node_id)
+fn apply_changes(ast: &rnix::parser::AST<'static>, operations: &[Operation]) -> rnix::parser::AST<'static> {
+    match operations {
+        [ operation, rest.. ] => {
+            let new_ast = match operation {
+                Operation::Replace(node_id, replacement) => replacement.apply_on_ast(ast, node_id)
             };
             apply_changes(&new_ast, rest)
         },
@@ -87,21 +97,10 @@ fn main() {
 
     let ast = rnix::parse(&code).unwrap();
     let nodes_to_replace = collect::find_all(&stdenv_identifier, &ast);
-    let operations: Vec<Change> = nodes_to_replace.into_iter().map(|(node_id, node)| {
-        match &node.data {
-            rnix::parser::Data::Ident(meta, _) => Change::Replace(
-                node_id,
-                Replacement {
-                    kind: rnix::parser::ASTKind::Ident,
-                    data: rnix::parser::Data::Ident(
-                        meta.clone(),
-                        "foo".to_string()
-                    )
-                }
-            ),
-            _ => unreachable!()
-        }
-    }).collect();
+    let operations: Vec<Operation> = nodes_to_replace.into_iter().map(|(node_id, _)| Operation::Replace(
+        node_id,
+        Replacement { node: build_identifier("foo") }
+    )).collect();
 
     println!("Replacing stdenv with foo in {:?}", path);
     println!("Changes: {:?}", operations);
