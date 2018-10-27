@@ -3,8 +3,6 @@ name = "nixcodemod"
 version = "0.1.0"
 authors = [ "Stefan Lau <github@stefanlau.com>", "Mathias Schreck <schreck.mathias@gmail.com>"]
 
-[dependencies.arenatree]
-path = "../arenatree"
-
 [dependencies.rnix]
-path = "../rnix"
+git = "https://gitlab.com/selaux/rnix.git"
+branch = "integration"

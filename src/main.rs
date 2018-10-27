@@ -1,7 +1,6 @@
 #![feature(slice_patterns)]
 
 extern crate rnix;
-extern crate arenatree;
 
 use std::path::PathBuf;
 
@@ -24,7 +23,7 @@ impl Replacement {
             data: self.data.clone(),
             span: original_node.span.clone(),
             // TODO: What about the children? And what about exposing this in rnix
-            node: arenatree::Node {
+            node: rnix::parser::Node {
                 child: None,
                 sibling: original_node.node.sibling
             }
