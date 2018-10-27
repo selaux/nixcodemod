@@ -2,10 +2,13 @@
 
 extern crate rnix;
 
+mod collect;
+
 use std::path::PathBuf;
 
 use std::fs::File;
 use std::io::Read;
+use rnix::parser::{NodeId, ASTNode};
 
 #[derive(Debug)]
 struct Replacement {
@@ -57,44 +60,6 @@ enum Change {
     Replace(rnix::parser::NodeId, Replacement)
 }
 
-fn visit_node(node_id: rnix::parser::NodeId, node: &rnix::parser::ASTNode) -> Vec<Change> {
-    match &node.data {
-        rnix::parser::Data::Ident(meta, name) => {
-            match name.as_str() {
-                "stdenv" => vec![
-                    Change::Replace(
-                        node_id,
-                        Replacement {
-                            kind: rnix::parser::ASTKind::Ident,
-                            data: rnix::parser::Data::Ident(
-                                meta.clone(),
-                                "foo".to_string()
-                            )
-                        }
-                    )
-                ],
-                _ => vec![]
-            }
-        },
-        _ => vec![]
-    }
-}
-
-fn walk_node(arena: &rnix::parser::Arena, node_id: rnix::parser::NodeId, node: &rnix::parser::ASTNode) -> Vec<Change> {
-    let mut changes = vec![];
-    let mut changes_for_current_node = visit_node(node_id, node);
-
-    changes.append(&mut changes_for_current_node);
-    for child_id in node.children(arena) {
-        let child = &arena[child_id];
-        let mut changes_for_child = walk_node(arena, child_id, child);
-
-        changes.append(&mut changes_for_child);
-    }
-
-    return changes;
-}
-
 fn apply_changes(ast: &rnix::parser::AST<'static>, changes: &[Change]) -> rnix::parser::AST<'static> {
     match changes {
         [ change, rest.. ] => {
@@ -107,6 +72,13 @@ fn apply_changes(ast: &rnix::parser::AST<'static>, changes: &[Change]) -> rnix::
     }
 }
 
+fn stdenv_identifier(_: &NodeId, node: &ASTNode) -> bool {
+    match &node.data {
+        rnix::parser::Data::Ident(_, name) => name == "stdenv",
+        _ => false
+    }
+}
+
 fn main() {
     let path = PathBuf::from("../nixpkgs/pkgs/build-support/rust/default.nix");
     let mut code = String::new();
@@ -114,13 +86,26 @@ fn main() {
     File::open(&path).unwrap().read_to_string(&mut code).unwrap();
 
     let ast = rnix::parse(&code).unwrap();
-    let root_node = &ast.arena[ast.root];
+    let nodes_to_replace = collect::find_all(&stdenv_identifier, &ast);
+    let operations: Vec<Change> = nodes_to_replace.into_iter().map(|(node_id, node)| {
+        match &node.data {
+            rnix::parser::Data::Ident(meta, _) => Change::Replace(
+                node_id,
+                Replacement {
+                    kind: rnix::parser::ASTKind::Ident,
+                    data: rnix::parser::Data::Ident(
+                        meta.clone(),
+                        "foo".to_string()
+                    )
+                }
+            ),
+            _ => unreachable!()
+        }
+    }).collect();
 
     println!("Replacing stdenv with foo in {:?}", path);
+    println!("Changes: {:?}", operations);
 
-    let changes = walk_node(&ast.arena, ast.root, root_node);
-    println!("Changes: {:?}", changes);
-
-    let new_ast = apply_changes(&ast, &changes);
+    let new_ast = apply_changes(&ast, &operations);
     print!("New AST: {}", new_ast);
 }
