@@ -38,10 +38,10 @@ impl OperationExt for Replacement {
 
         new_arena.take(*original_node_id);
 
-        return AST {
+        AST {
             arena: new_arena,
-            root: ast.root.clone(),
-        };
+            root: ast.root,
+        }
     }
 }
 

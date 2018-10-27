@@ -25,7 +25,7 @@ impl ToAstNode for IsolatedIdentifier {
                 },
                 self.name.clone(),
             ),
-            span: reference_node.span.clone(),
+            span: reference_node.span,
             node: Node {
                 child: None,
                 sibling: reference_node.node.sibling,
@@ -43,7 +43,7 @@ impl ToAstNode for IsolatedNode {
 }
 
 pub fn build_identifier(name: &str) -> IsolatedNode {
-    return IsolatedNode::Identifier(IsolatedIdentifier {
+    IsolatedNode::Identifier(IsolatedIdentifier {
         name: String::from(name),
-    });
+    })
 }
