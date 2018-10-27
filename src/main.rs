@@ -22,7 +22,7 @@ impl Replacement {
             kind: self.kind,
             data: self.data.clone(),
             span: original_node.span.clone(),
-            // TODO: What about the children? And what about exposing this in rnix
+            // TODO: What about the children?
             node: rnix::parser::Node {
                 child: None,
                 sibling: original_node.node.sibling
