@@ -6,7 +6,7 @@ mod test_integration_replace {
 
     #[test]
     fn test_replace_identifier_by_identifier() {
-        fn some_identifier(_: &Arena, _: &NodeId, node: &ASTNode) -> bool {
+        fn some_identifier(_: &Arena, _: NodeId, node: &ASTNode) -> bool {
             match &node.data {
                 rnix::parser::Data::Ident(_, name) => name == "some",
                 _ => false
