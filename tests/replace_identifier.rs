@@ -9,7 +9,7 @@ mod test_integration_replace {
         fn some_identifier(_: &Arena, _: NodeId, node: &ASTNode) -> bool {
             match &node.data {
                 rnix::parser::Data::Ident(_, name) => name == "some",
-                _ => false
+                _ => false,
             }
         }
         let code = r#"
@@ -29,10 +29,17 @@ mod test_integration_replace {
 
         let ast = rnix::parse(code).unwrap();
         let nodes_to_replace = find_all(&some_identifier, &ast);
-        let operations: Vec<Operation> = nodes_to_replace.into_iter().map(|(node_id, _)| Operation::Replace(
-            node_id,
-            Replacement { node: build_identifier("other") }
-        )).collect();
+        let operations: Vec<Operation> = nodes_to_replace
+            .into_iter()
+            .map(|(node_id, _)| {
+                Operation::Replace(
+                    node_id,
+                    Replacement {
+                        node: build_identifier("other"),
+                    },
+                )
+            })
+            .collect();
         let new_ast = apply_operations(&ast, &operations);
 
         assert_eq!(format!("{}", new_ast), expected);
