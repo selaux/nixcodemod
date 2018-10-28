@@ -36,6 +36,18 @@ pub fn collect_in_subtree<T>(
         result.push(m);
     }
 
+    result.append(&mut collect_in_children(collect, arena, node));
+
+    result
+}
+
+pub fn collect_in_children<T>(
+    collect: &impl CollectFromAST<Item = T>,
+    arena: &Arena,
+    node: &ASTNode,
+) -> Vec<T> {
+    let mut result = vec![];
+
     for child_id in node.children(arena) {
         let child = &arena[child_id];
         let mut changes_for_child = collect_in_subtree(collect, arena, child_id, child);
@@ -67,6 +79,18 @@ pub fn find_children(
     result
 }
 
+pub fn find_descendants(
+    match_fn: &'static MatchFn,
+    ast: &AST<'static>,
+    node_id: NodeId,
+) -> Vec<(NodeId, ASTNode)> {
+    let collect = CollectMatchingNodes { match_fn };
+    let arena = &ast.arena;
+    let node = &arena[node_id];
+
+    collect_in_children(&collect, &arena, node)
+}
+
 pub fn find_all(match_fn: &'static MatchFn, ast: &AST<'static>) -> Vec<(NodeId, ASTNode)> {
     let collect = CollectMatchingNodes { match_fn };
     let root_id = ast.root;
@@ -78,7 +102,7 @@ pub fn find_all(match_fn: &'static MatchFn, ast: &AST<'static>) -> Vec<(NodeId, 
 
 #[cfg(test)]
 mod tests {
-    use super::{find_all, find_children};
+    use super::{find_all, find_children, find_descendants};
     use rnix::parser::{ASTKind, ASTNode, Arena, Data, NodeId};
 
     const CODE: &str = r#"
@@ -152,5 +176,20 @@ mod tests {
             .collect();
 
         assert_eq!(identifiers, vec!["foo".to_string(), "bar".to_string()]);
+    }
+
+    #[test]
+    fn find_descendant_identifiers() {
+        let ast = rnix::parse(CODE).unwrap();
+        let lambda_body_id = ast.arena[ast.root].children(&ast.arena).last().unwrap();
+        let identifiers: Vec<String> = find_descendants(&find_identifier, &ast, lambda_body_id)
+            .into_iter()
+            .filter_map(get_name_from_identifier)
+            .collect();
+
+        assert_eq!(
+            identifiers,
+            vec!["baz".to_string(), "bar".to_string(), "bar".to_string()]
+        );
     }
 }
