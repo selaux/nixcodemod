@@ -6,13 +6,21 @@ pub trait OperationExt {
 }
 
 #[derive(Debug)]
-pub struct Replacement {
-    pub node: IsolatedNode,
+pub enum Operation {
+    Replace(NodeId, Replacement),
+}
+
+impl OperationExt for Operation {
+    fn apply(&self, ast: &AST<'static>, _: &NodeId) -> AST<'static> {
+        match self {
+            Operation::Replace(node_id, replacement) => replacement.apply(ast, node_id),
+        }
+    }
 }
 
 #[derive(Debug)]
-pub enum Operation {
-    Replace(NodeId, Replacement),
+pub struct Replacement {
+    pub node: IsolatedNode,
 }
 
 impl OperationExt for Replacement {
@@ -48,9 +56,7 @@ impl OperationExt for Replacement {
 pub fn apply_operations(ast: &AST<'static>, operations: &[Operation]) -> AST<'static> {
     match operations {
         [operation, rest..] => {
-            let new_ast = match operation {
-                Operation::Replace(node_id, replacement) => replacement.apply(ast, node_id),
-            };
+            let new_ast = operation.apply(ast, &ast.root);
             apply_operations(&new_ast, rest)
         }
         [] => ast.clone(),
