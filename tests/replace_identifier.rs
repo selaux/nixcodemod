@@ -16,12 +16,14 @@ mod test_integration_replace {
             { some, function }:
             {
                 inherit some;
+                foo = "bar";
             }
         "#;
         let expected = r#"
             { other, function }:
             {
                 inherit other;
+                foo = "bar";
             }
         "#;
 
