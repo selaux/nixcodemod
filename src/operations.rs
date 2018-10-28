@@ -1,5 +1,5 @@
 use node_builder::{IsolatedNode, ToAstNode};
-use rnix::parser::{NodeId, AST};
+use rnix::parser::{NodeId, AST, Data};
 
 pub trait OperationExt {
     fn apply(&self, ast: &AST<'static>, original_node_id: &NodeId) -> AST<'static>;
@@ -8,12 +8,14 @@ pub trait OperationExt {
 #[derive(Debug)]
 pub enum Operation {
     Replace(NodeId, Replacement),
+    Remove(NodeId, Remove)
 }
 
 impl OperationExt for Operation {
     fn apply(&self, ast: &AST<'static>, _: &NodeId) -> AST<'static> {
         match self {
             Operation::Replace(node_id, replacement) => replacement.apply(ast, node_id),
+            Operation::Remove(node_id, remove) => remove.apply(ast, node_id)
         }
     }
 }
@@ -45,6 +47,37 @@ impl OperationExt for Replacement {
         }
 
         new_arena.take(*original_node_id);
+
+        AST {
+            arena: new_arena,
+            root: ast.root,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Remove {}
+
+impl OperationExt for Remove {
+    fn apply(&self, ast: &AST<'static>, node_to_remove_id: &NodeId) -> AST<'static> {
+        let mut new_arena = ast.arena.clone();
+        let node_ids = new_arena.get_ids();
+        let node_to_remove = &ast.arena[*node_to_remove_id];
+        let node_sibling = node_to_remove.node.sibling;
+
+        for node_id in node_ids {
+            let mut astnode_to_update = &mut new_arena[node_id];
+            let mut node_to_update = &mut astnode_to_update.node;
+
+            if Some(*node_to_remove_id) == node_to_update.child {
+                node_to_update.child = node_sibling;
+            }
+            if Some(*node_to_remove_id) == node_to_update.sibling {
+                node_to_update.sibling = node_sibling;
+            }
+        }
+
+        new_arena.take(*node_to_remove_id);
 
         AST {
             arena: new_arena,

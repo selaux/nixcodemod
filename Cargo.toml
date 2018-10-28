@@ -6,3 +6,6 @@ authors = [ "Stefan Lau <github@stefanlau.com>", "Mathias Schreck <schreck.mathi
 [dependencies.rnix]
 git = "https://gitlab.com/selaux/rnix.git"
 branch = "integration"
+
+[dev-dependencies]
+glob = "0.2.11"
